@@ -51,7 +51,7 @@
 <body>
     <div class="container">
         <h1>{{ quiz.title }}</h1>
-        <form method="post">
+        <form id="quizForm" method="post">
             {% for question in quiz.questions %}
             <div class="mb-4">
                 <p>{{ question.question_text }}</p>
@@ -66,12 +66,52 @@
                 </ul>
             </div>
             {% endfor %}
-            <button type="submit">Submit</button>
+            <button type="submit" id="submitQuiz">Submit</button>
         </form>
+        <div id="totalPoints" style="display: none;"></div>
     </div>
     <!-- Bootstrap JS (optional) -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        // Get the quiz ID from the route parameters
+        const QUIZ_ID = {{ quiz.id }};
+
+        document.getElementById('quizForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+            const selectedOptions = [];
+            formData.forEach((value, key) => {
+                if (key.startsWith('question')) {
+                    selectedOptions.push({question_id: parseInt(key.split('question')[1]), option_id: parseInt(value)});
+                }
+            });
+
+            // Assuming you have stored student information in localStorage
+            const student = JSON.parse(localStorage.getItem('student'));
+
+            const data = {
+                student_id: student.id, // Replace STUDENT_ID with the actual student ID
+                responses: selectedOptions
+            };
+
+            fetch(`/api/quiz/${QUIZ_ID}/submit`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                                    window.location.href = `/quiz/${QUIZ_ID}/summary?id=${QUIZ_ID}`;
+
+            })
+            .catch(error => {
+                console.error('Error submitting quiz:', error);
+            });
+        });
+    </script>
 </body>
 </html>

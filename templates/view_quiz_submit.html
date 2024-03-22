@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Summary</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+ <div class="container">
+        <h1>Quiz Summary</h1>
+         <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>User Name</th>
+                    <th>Total Marks</th>
+                </tr>
+            </thead>
+            <tbody id="quiz-summary-body">
+                <!-- Summary data will be dynamically added here -->
+            </tbody>
+        </table>
+        <button type="submit" id="viewDashboard" class="btn btn-primary">Back to Dashboard</button>
+    </div>
+
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+
+        const QUIZ_ID = 17; // Replace with the actual quiz ID
+
+        // Fetch quiz summary data and populate the table
+        fetch(`/api/quiz/${QUIZ_ID}/instructor`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch quiz summary');
+                }
+                return response.json();
+            })
+            .then(data => {
+                const summaryData = mapDataToDesiredFormat(data.questions);
+                populateQuizSummary(summaryData);
+            })
+            .catch(error => {
+                console.error('Error fetching quiz summary:', error);
+            });
+
+        // Function to populate the quiz summary table
+        function populateQuizSummary(summaryData) {
+    const quizSummaryBody = document.getElementById('quiz-summary-body');
+    quizSummaryBody.innerHTML = ''; // Clear previous content
+
+    // Create an object to store aggregated marks for each user
+    const userMarksMap = {};
+
+    // Iterate over each response
+    summaryData.forEach(question => {
+        question.responses.forEach(response => {
+            const userId = response.student_id;
+            const userName = response.student_name;
+            const marks = response.marks;
+
+            // If the user exists in the map, add their marks, otherwise initialize it
+            if (userMarksMap[userId]) {
+                userMarksMap[userId].marks += marks;
+            } else {
+                userMarksMap[userId] = { name: userName, marks: marks };
+            }
+        });
+    });
+
+    // Populate the table with aggregated marks for each user
+    Object.values(userMarksMap).forEach(user => {
+        const row = `
+            <tr>
+                <td>${user.name}</td>
+                <td>${user.marks} / ${summaryData.length}</td>
+            </tr>`;
+        quizSummaryBody.innerHTML += row;
+    });
+}
+
+        function calculateMarks(response) {
+            let marks = 0;
+            response.options.forEach(option => {
+                if (option.is_correct && response.selectedOption.option_id === option.option_id) {
+                    marks++;
+                }
+            });
+            return marks;
+        }
+
+        // Function to map the original data into the desired format
+        function mapDataToDesiredFormat(data) {
+            const mappedData = data.map(question => ({
+                question_id: question.question_id,
+                question_text: question.question_text,
+                responses: question.responses.map(response => ({
+                    marks: calculateMarks(response),
+                    option_text: response.option_text,
+                    options: response.options,
+                    selectedOption: response.selectedOption,
+                    student_id: response.student_id,
+                    student_name: response.student_name
+                }))
+            }));
+            return mappedData;
+        }
+    </script>
+</body>
+</html>
